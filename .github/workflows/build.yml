@@ -1,4 +1,4 @@
-name: Build Uma Landscape (arm64 zygisk module)
+name: Build libhachimi_landscape.so
 
 on:
   push:
@@ -11,36 +11,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install toolchain
+      - name: Install NDK
         run: |
-          sudo apt-get update && sudo apt-get install -y ninja-build zip
           wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip -q android-ndk-r26d-linux.zip
           echo "NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
 
-      - name: Fetch Dobby + zygisk headers
+      - name: Build plugin (arm64-v8a)
         run: |
-          git clone --depth 1 https://github.com/jmpews/Dobby thirdparty/Dobby
-          mkdir -p include
-          curl -fsSL https://raw.githubusercontent.com/LSPosed/zygisk-module-sample/master/module/zygisk.hpp -o include/zygisk.hpp
+          mkdir -p out
+          $NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang++ \
+            -shared -O2 -std=c++17 -fvisibility=hidden \
+            plugin/hachimi_landscape.cpp \
+            -o out/libhachimi_landscape.so \
+            -llog -ldl
 
-      - name: Configure + build
+      - name: Build plugin (armeabi-v7a)
         run: |
-          cmake -S native -B build -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28 \
-            -DDOBBY_DIR=$PWD/thirdparty/Dobby \
-            -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
+          $NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi28-clang++ \
+            -shared -O2 -std=c++17 -fvisibility=hidden \
+            plugin/hachimi_landscape.cpp \
+            -o out/armeabi-v7a_libhachimi_landscape.so \
+            -llog -ldl || echo "v7a optional"
 
-      - name: Package Magisk module
+      - name: Package
         run: |
-          mkdir -p pkg/zygisk
-          cp module.prop pkg/
-          cp build/libuma_landscape.so pkg/zygisk/arm64-v8a.so
-          cd pkg && zip -r ../uma-landscape-v0.1.zip . && cd ..
+          cd out
+          echo "把 libhachimi_landscape.so 按小黑板(libhachimi_*.so)同样的方式装进游戏即可。" > INSTALL.txt
+          zip -r ../uma-landscape-v0.2-plugin.zip .
+          cd ..
 
       - uses: actions/upload-artifact@v4
         with:
-          name: uma-landscape-v0.1
-          path: uma-landscape-v0.1.zip
+          name: uma-landscape-v0.2-plugin
+          path: uma-landscape-v0.2-plugin.zip
