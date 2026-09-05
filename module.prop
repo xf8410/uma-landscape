@@ -1,0 +1,6 @@
+id=uma_landscape
+name=Uma Landscape
+version=v0.1
+versionCode=1
+author=xf8410
+description=Force landscape for Uma Musume (JP). Zygisk module, engine-level Screen orientation hook. Independent of Hachimi/hlpatch.
